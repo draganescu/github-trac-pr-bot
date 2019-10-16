@@ -4,12 +4,13 @@ There are two kinds of GitHub comments:
 
 1. The pull request comment
 2. The code review comment made of:
-2.1 Many inline code review comments
-2.2 One final code review comment
+
+- Many inline code review comments
+- One final code review comment
 
 To do:
 
 - [x] Add new pull request comments
 - [ ] Edit pull request comments
-- [-] Add new code review comments
+- [ ] Add new code review comments
 - [ ] Add code review comments
