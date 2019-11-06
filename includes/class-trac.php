@@ -66,6 +66,15 @@ class Trac {
 
 		return $this->rpc->getResponse();
 	}
+	
+	function ticket_get_actions( $id ) {
+		$ok = $this->rpc->query( 'ticket.component.getAll', $id );
+		if ( !$ok ) {
+			return FALSE;
+		}
+
+		return $this->rpc->getResponse();
+	}
 
 	/**
 	 * @return [id, time_created, time_changed, attributes] or false on failure.

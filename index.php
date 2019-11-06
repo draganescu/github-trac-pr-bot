@@ -86,13 +86,15 @@ function create_trac_pr_comment( $id, $user_link, $user_name, $created_at, $comm
 	return $comment;
 }
 
-function create_trac_review_comment( $identifier, $user_link, $user_name, $created_at, $cr_comment, $inline_comment, $comment_link ) {
+function create_trac_review_comment( $identifier, $user_link, $user_name, $created_at, $hunk, $cr_comment, $inline_comment, $comment_link ) {
 
 	$comment_template="{{{#!comment
 %s
 }}}
 
 [%s %s] reviewed on %s:
+
+%s
 
 {{{#!comment
 CRCOMMENT
@@ -112,12 +114,17 @@ INLINECOMMENT
 
 [%s View on GitHub]";
 
+	if ( ! empty( $hunk ) ) {
+		$hunk = "{{{\n" . $hunk . "\n}}}";
+	}
+
 	$comment = sprintf(
 		$comment_template,
 		$identifier,
 		$user_link,
 		$user_name,
 		$created_at,
+		$hunk,
 		$cr_comment,
 		$inline_comment,
 		$comment_link
@@ -154,10 +161,9 @@ function append_trac_inline_comment( $comment, $new_inline_comment ) {
 	return $comment;
 }
 
-$gh_json = json_decode( $_POST['payload'] );
+$gh_json = json_decode($_POST['payload']);
 
 //file_put_contents('./gh-log-test'.time().'-'.md5($_POST['payload']).'.txt', $_REQUEST, FILE_APPEND); exit;
-
 //$gh_json = json_decode(file_get_contents('./gh-log-test-review-submitted.txt'));
 
 $trac_xmlrpc = new \Trac( 'pullrequestbot', PRBOT_WPORG_PASSWORD, "core.trac.wordpress.org", '/login/xmlrpc', 443, true );
@@ -172,7 +178,10 @@ if ( is_inline_comment( $gh_json ) || is_cr_comment( $gh_json ) ) {
 
 $ticket = $trac_xmlrpc->ticket_query( "prnumber=".$ticker_identifier )[0];
 
+ob_start();
 ?>
+Payload: <pre><?=$_POST['payload']; ?></pre><br/>
+Time: <?=time(); ?> <br/>
 Is pr comment: <?=is_pr_comment($gh_json); ?> <br/>
 Is cr comment: <?=is_cr_comment($gh_json); ?> <br/>
 Is inline comment: <?=is_inline_comment($gh_json); ?> <br/>
@@ -186,7 +195,14 @@ Is new comment by pull request id <?=$gh_json->comment->pull_request_review_id?>
 Comment by pull request id: <?=print_r(get_trac_comment( $ticket, $gh_json->comment->pull_request_review_id ));?> <br />
 <?php
 
-// $ticket = $trac_xmlrpc->ticket_query( "prnumber=100")[0];
+// $ticket = $trac_xmlrpc->ticket_query( "prnumber=100" )[0];
+// $comments = $trac_xmlrpc->ticket_get_comments( $ticket );
+// $comments[0][4] = 'This is a test';
+// $trac_xmlrpc->ticket_update(
+// 	$ticket, $comments[0][4],
+// 	array( '_ts' => $comments[0][0] )
+// );
+// echo 'comment updated'; exit;
 // $comment = get_trac_comment( $ticket, '538803654' );
 // echo '<pre>';
 // var_dump($comment);
@@ -230,6 +246,7 @@ if ( is_inline_comment( $gh_json ) ) {
 		$gh_json->comment->user->html_url,
 		$gh_json->comment->user->login,
 		$gh_json->comment->created_at,
+		$gh_json->comment->diff_hunk,
 		'',
 		$gh_json->comment->body,
 		$gh_json->comment->html_url
@@ -254,9 +271,10 @@ if ( is_cr_comment( $gh_json ) ) {
 			$gh_json->review->user->html_url,
 			$gh_json->review->user->login,
 			$gh_json->review->submitted_at,
+			'',
 			$gh_json->review->body,
 			'',
-			$gh_json->review->url
+			$gh_json->review->html_url
 		);
 	};
 }
@@ -271,8 +289,21 @@ if ( is_cr_comment( $gh_json ) && ! is_new_trac_comment( $ticket, $gh_json->revi
 }
 */
 
+?>
+Comment content: <br/>
+<?=$comment; ?>
+<?php
 // we save the edited comment
-$trac_xmlrpc->ticket_update( $ticket, $comment );
+$response = false;
+while( $response === false ) {
+	$response = $trac_xmlrpc->ticket_update( $ticket, $comment );
+}
+var_dump( $response );
+?>
+<hr/>
+<?php
+$log_data = ob_get_clean();
+file_put_contents('./pr-bot-log.html', $log_data, FILE_APPEND);
 
 
 
