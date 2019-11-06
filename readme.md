@@ -12,5 +12,6 @@ To do:
 
 - [x] Add new pull request comments
 - [ ] Edit pull request comments
-- [ ] Add new code review comments
-- [ ] Add code review comments
+- [x] Add new code review comments
+- [x] Add code review comments
+- [ ] Respect the order of GH posting
